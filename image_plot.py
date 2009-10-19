@@ -1,9 +1,11 @@
 
 from numpy import linspace, sin
-from enthought.chaco.api import ArrayPlotData, Plot, gray, GridContainer
+from enthought.chaco.api import ArrayPlotData, Plot, gray, GridContainer, \
+    OverlayPlotContainer
 from enthought.enable.component_editor import ComponentEditor
-from enthought.traits.api import HasTraits, Instance
+from enthought.traits.api import HasTraits, Instance, DelegatesTo
 from enthought.traits.ui.api import Item, View
+from enthought.chaco.tools.cursor_tool import CursorTool, BaseCursorTool
 
 # File IO imports
 from enthought.traits.api import File, Button
@@ -26,6 +28,9 @@ class ImagePlot(HasTraits):
 
     plot = Instance(GridContainer)
     container = GridContainer(shape=(2,2))
+    
+    cursor = Instance(BaseCursorTool)
+    #cursor_pos = DelegatesTo('cursor', prefix='current_position')
 
     traits_view = View(
             Item('plot', editor=ComponentEditor(), show_label=False), 
@@ -46,15 +51,20 @@ class ImagePlot(HasTraits):
         sagittal = img._data[:, ydim/2, :]
         coronal = img._data[zdim/2, :, :]
 
-        #plotdata = ArrayPlotData(image=image)
-        plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, coronal=coronal)
+        # Create array data container
+        plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, 
+                                 coronal=coronal)
+
         # Create a Plot and associate it with the PlotData
         axl_plt = Plot(plotdata)
-        axl_plt.img_plot('axial', colormap=gray)
+        axl_imgplt = axl_plt.img_plot('axial', colormap=gray)
+        axl_imgplt = axl_imgplt[0] # img_plot returns a list
+
         sag_plt = Plot(plotdata)
         sag_plt.img_plot('sagittal', colormap=gray)
         cor_plt = Plot(plotdata)
         cor_plt.img_plot('coronal', colormap=gray)
+
         # Set the title
         #plot.title = filename
 
@@ -62,8 +72,12 @@ class ImagePlot(HasTraits):
         self.container.add(sag_plt)
         self.container.add(cor_plt)
 
-        #[axl_plt, sag_plt, cor_plt])
-        #container = GridPlotContainer(axl_plt, sag_plt, cor_plt)
+        # Adding a cursor to the axial plot to test cursor
+        # functionality in Chaco
+        self.cursor = CursorTool(axl_imgplt, drag_button='left', color='blue')
+        self.cursor.current_position = zdim/2, ydim/2
+        axl_imgplt.overlays.append(self.cursor)
+
         # Assign it to our self.plot attribute
         self.plot = self.container
 
