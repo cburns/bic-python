@@ -44,27 +44,31 @@ class Crosshairs(BaseTool):
     event_state = Enum("normal", "mousedown")
     
     def map_data(self, event):
+        # Map event coords to data coords.
         x = self.component.x_mapper.map_data(event.x)
         y = self.component.y_mapper.map_data(event.y)
         return x, y
 
     def normal_left_down(self, event):
         self.event_state = 'mousedown'
-        print 'normal_left_down:', event.x, event.y
+        #print 'normal_left_down:', event.x, event.y
 
         for olay in self.component.overlays:
-            print 'olay:', olay
+            # Set initial position of the CursorTool if there is one.
+            #print 'olay:', olay
             if hasattr(olay, 'current_position'):
-                print 'current_position!'
+                #print 'current_position!'
                 x, y = self.map_data(event)
                 olay.current_position = x, y
+        event.handled = True
 
     def mousedown_mouse_move(self, event):
+        # XXX this func unnecessary as the CursorTool sets position
         x, y = self.map_data(event)
-        print 'mousedown_mouse_move', x, y
+        #print 'mousedown_mouse_move', x, y
 
     def mousedown_left_up(self, event):
-        print 'mousedown_left_up'
+        #print 'mousedown_left_up'
         self.event_state = "normal"
         event.handled = True
 
@@ -76,7 +80,7 @@ class ImagePlot(HasTraits):
     container = GridContainer(shape=(2,2))
     
     cursor = Instance(BaseCursorTool)
-    #cursor_pos = DelegatesTo('cursor', prefix='current_position')
+    cursor_pos = DelegatesTo('cursor', prefix='current_position')
 
     traits_view = View(
             Item('plot', editor=ComponentEditor(), show_label=False), 
@@ -98,33 +102,35 @@ class ImagePlot(HasTraits):
         sagittal = img._data[zdim/2, :, :]
 
         # Create array data container
-        plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, 
+        self.plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, 
                                  coronal=coronal)
 
         # Create a Plot and associate it with the PlotData
-        axl_plt = Plot(plotdata)
+        axl_plt = Plot(self.plotdata)
         axl_imgplt = axl_plt.img_plot('axial', colormap=gray)
         axl_imgplt = axl_imgplt[0] # img_plot returns a list
 
-        sag_plt = Plot(plotdata)
+        sag_plt = Plot(self.plotdata)
         sag_imgplt = sag_plt.img_plot('sagittal', colormap=gray)[0]
         # Crosshairs
-        sag_imgplt.tools.append(Crosshairs(sag_imgplt))
+        #sag_imgplt.tools.append(Crosshairs(sag_imgplt))
 
-        cor_plt = Plot(plotdata)
+        cor_plt = Plot(self.plotdata)
         self.cor_imgplt = cor_plt.img_plot('coronal', colormap=gray)[0]
+        """
         overlays = self.cor_imgplt.overlays
         overlays.append(LineInspector(self.cor_imgplt, 
                                       axis='value',
-                                      #write_metadata=True,
-                                      #metadata_name='mouse',
+                                      write_metadata=True,
+                                      metadata_name='mouse',
                                       color='red', width=2.0))
         overlays.append(LineInspector(self.cor_imgplt, axis='index',
-                                      #write_metadata=True,
-                                      #metadata_name='mouse',
+                                      write_metadata=True,
+                                      metadata_name='mouse',
                                       color='red', width=2.0))
 
         self.cor_imgplt.tools.append(EventPrinter(self.cor_imgplt))
+        """
 
         # Set the title
         #plot.title = filename
@@ -143,13 +149,22 @@ class ImagePlot(HasTraits):
         # Assign it to our self.plot attribute
         self.plot = self.container
 
-        """
-        @on_trait_change('cor_imgplt.index.metadata_changed')
-        def barfunc(self):
-            print self.cor_imgplt.index
-            print self.cor_imgplt.value
-            """
 
+    """
+    @on_trait_change('cursor.current_position')
+    def cursor_func(self, name, old, new):
+        print 'cursor_func:', name
+        x, y = self.cursor_pos
+        print 'cursor_pos (%.2f, %.2f)', x, y 
+        print 'intesity:', self.axial[int(x), int(y)]
+    """
+
+    def _cursor_pos_changed(self, name, old, new):
+        print '_cursor_pos_changed:', name
+        x, y = self.cursor_pos
+        print 'cursor_pos (%d, %d)' % (x, y)
+        arr = self.plotdata['axial']
+        print 'intesity:', arr[y,x]
 
 if __name__ == "__main__":
     ImagePlot().configure_traits()
