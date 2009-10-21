@@ -150,7 +150,8 @@ def main(argv=None):
     search_path = validate_search_path(args.path)
     filelist = get_file_list(search_path, args.patterns)
     if args.list:
-        print filelist
+        for item in filelist:
+            print item
 
     print_stats(filelist, args.patterns)
 
