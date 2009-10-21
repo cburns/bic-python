@@ -13,6 +13,20 @@ argparse.py
     This can be installed via yum:  yum search python-argparse
     Or from the website:  http://code.google.com/p/argparse/
 
+Examples
+--------
+
+Find stats on all Nifti and Analyze files in the users 'data' directory:
+    ./file_stats.py ~/data
+
+Find stats on all Nifti files only:
+    ./file_stats.py ~/data --patterns *.nii
+OR:
+    ./file_stats.py ~/data -p *.nii
+
+Find stats on all files with 'foo' in their name:
+    ./file_stats.py ~/data -p *foo*
+
 """
 
 import os
@@ -87,6 +101,25 @@ def get_file_list(search_path, patterns):
     filelist = list(all_dirs(search_path, patterns))
     return filelist
 
+def print_stats(filelist, patterns):
+    """Print file statistics for files in filelist."""
+    # Get some stats
+    asum, amean = file_sizes(filelist)
+    # set internationalization settings to user defaults
+    locale.setlocale(locale.LC_ALL, "")
+    print 'Patterns matched:', patterns
+    print 'Number of files: ', len(filelist)
+    print 'Total size:    ', locale.format('%d', asum, True).rjust(20)
+    print 'Average size:  ', locale.format('%d', amean, True).rjust(20)
+    """
+    print '-'*70
+    print 'PATTERNS'.ljust(20),
+    print '#_FILES'.rjust(20),
+    print 'TOTAL_SIZE'.rjust(20),
+    print 'AVG_SIZE'.rjust(20)
+    print '-'*70
+    """
+
 def main(argv=None):
     if argv is None:
         # Look at the FILE_STATS_ARGS environment variable for more arguments.
@@ -102,23 +135,21 @@ def main(argv=None):
                         help='print all files matching the patterns')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='print out some debugging info')
+    parser.add_argument('--doc', action='store_true',
+                        help='print extended documentation')
     args = parser.parse_args()
     if args.debug:
         print args
+    if args.doc:
+        print __doc__
+        return
 
     search_path = validate_search_path(args.path)
     filelist = get_file_list(search_path, args.patterns)
-    # TODO: parameterize?
-    asum, amean = file_sizes(filelist)
-    
     if args.list:
         print filelist
 
-    locale.setlocale(locale.LC_ALL, "")
-    print 'Total number of images:', len(filelist)
-    print 'Total size of nifti and analyze images:', \
-        locale.format('%d', asum, True)
-    print 'Average size:', locale.format('%d', amean, True) 
+    print_stats(filelist, args.patterns)
 
 
 if __name__ == '__main__':
