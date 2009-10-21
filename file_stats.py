@@ -1,13 +1,25 @@
+#!/usr/bin/env python
+"""A script to answer these questions about data files used at the
+BIC: how many, how large, and what type of files.
+
+Requires
+--------
+Python 2.4 or greater
+
+argparse.py 
+    This can be installed via yum: yum search python-argparse
+    Or from the website: http://code.google.com/p/argparse/
+
+"""
 
 import os
-import glob
 import fnmatch
 import locale
+import argparse
 
-def all_files(pattern, search_path, pathsep=os.pathsep):
-    for path in search_path.split(pathsep):
-        for match in glob.glob(os.path.join(path, pattern)):
-            yield match
+nifti_pattern = '*.nii*'
+analyze_pattern = '*.img*'
+zip_pattern = '*.gz;*.zip;*.bz2'
 
 def file_sizes(file_list):
     size_list = map(os.path.getsize, file_list)
@@ -16,8 +28,24 @@ def file_sizes(file_list):
     return size_sum, size_mean
 
 def all_dirs(root, patterns='*', single_level=False, yield_folders=False):
-    """Python Cookbook Recipe 2.16
-    patterns is a semicolon-separated string.
+    """Return path of filenames that match given patterns.
+    
+    Parameters
+    ----------
+    root : string
+        Root path to begin searching for files that match the patterns
+    patterns : string
+        Patterns to search for, multiple patterns are separated by semicolon.
+        TODO:  Make this a list!
+    single_level : {True, False}
+        TODO: Change to recurse and reverse logic below!
+    yield_folders : {True, False}
+        TODO: Understand this param.
+
+    Notes
+    -----
+    Code taken from Python Cookbook Recipe 2.16
+
     """
     patterns = patterns.split(';')
     for path, subdirs, files in os.walk(root):
@@ -33,25 +61,21 @@ def all_dirs(root, patterns='*', single_level=False, yield_folders=False):
             break
 
 if __name__ == '__main__':
-    pattern = '*.nii*'
-    search_path = os.path.abspath(os.path.expanduser('~/data'))
-    file_list = list(all_files(pattern, search_path))
-    pattern = '*.img*'
-    anas = list(all_files(pattern, search_path))
-    for item in anas:
-        file_list.append(item)
-    print file_list
-    asum, amean = file_sizes(file_list)
+    desc = 'Script to acquire some statistics on images used at the BIC'
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('path', help='the path to generate stats on')
+    args = parser.parse_args()
     
-    print 'total size:', asum
-    print 'average size:', amean
+    search_path = os.path.abspath(os.path.expanduser(args.path))
+    if not os.path.exists(search_path):
+        msg = 'Path "%s" does not exist!' % search_path
+        raise IOError(msg)
 
     newlist = list(all_dirs(search_path, patterns='*.nii*;*.img*'))
     asum, amean = file_sizes(newlist)
-    #print 'total size:', asum
-    #print 'average size:', amean
     
     locale.setlocale(locale.LC_ALL, "")
+    print 'Total number of images:', len(newlist)
     print 'Total size of nifti and analyze images:', \
         locale.format('%d', asum, True)
     print 'Average size:', locale.format('%d', amean, True) 
