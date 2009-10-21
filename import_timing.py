@@ -13,7 +13,7 @@ level = 0
 parent = None
 children = {}
 
-def new_import(name, globals, locals, fromlist):
+def new_import(name, globals={}, locals={}, fromlist=[]):
     global level, parent
     if name in seen:
         return old_import(name, globals, locals, fromlist)
@@ -30,23 +30,37 @@ def new_import(name, globals, locals, fromlist):
     elapsed_times[name] = t2-t1
     return module
 
+# Use our own import function
 old_import = __builtins__.__import__
-
 __builtins__.__import__ = new_import
 
-import numpy
+def build_parents(import_order):
+    parents = {}
+    for name, level, parent in import_order:
+        parents[name] = parent
+    return parents
 
-parents = {}
-for name, level, parent in import_order:
-    parents[name] = parent
+def print_results(import_order, elapsed_times, parents):
+    print "== Tree =="
+    for name, level, parent in import_order:
+        print "%s%s: %.3f (%s)" % (" "*level, name, elapsed_times[name],
+                                   parent)
+    print "\n"
+    print "== Slowest (including children) =="
+    slowest = sorted((t, name) for (name, t) in elapsed_times.items())[-20:]
+    for elapsed_time, name in slowest[::-1]:
+        print "%.3f %s (%s)" % (elapsed_time, name, parents[name])
 
-print "== Tree =="
-for name, level,parent in import_order:
-    print "%s%s: %.3f (%s)" % (" "*level, name, elapsed_times[name],
-parent)
+def main(module_name):
 
-print "\n"
-print "== Slowest (including children) =="
-slowest = sorted((t, name) for (name, t) in elapsed_times.items())[-20:]
-for elapsed_time, name in slowest[::-1]:
-    print "%.3f %s (%s)" % (elapsed_time, name, parents[name])
+    print dir()
+    cmd = "__import__('%s')" % module_name
+    print cmd
+    eval(cmd, globals(), locals())
+    #exec cmd
+
+    parents = build_parents(import_order)
+    print_results(import_order, elapsed_times, parents)
+
+if __name__ == '__main__':
+    main('numpy')
