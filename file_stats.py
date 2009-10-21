@@ -86,18 +86,22 @@ if __name__ == '__main__':
     desc = 'Script to acquire some statistics on images used at the BIC'
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('path', help='the path to generate stats on')
-    #parser.add_argument('-f', '--foo', help='frabble the foos')
+    parser.add_argument('-p', '--patterns', default='*.nii*;*.img*',
+                        help='filename patterns to search for')
+    parser.add_argument('-l', '--list', action='store_true',
+                        help='print all files matching the patterns')
 
     args = parser.parse_args()
     print args
 
     search_path = validate_search_path(args.path)
-    # TODO: parameterize this from command-line
-    patterns = patterns='*.nii*;*.img*'
-    filelist = get_file_list(search_path, patterns)
+    filelist = get_file_list(search_path, args.patterns)
     # TODO: parameterize
     asum, amean = file_sizes(filelist)
     
+    if args.list:
+        print filelist
+
     locale.setlocale(locale.LC_ALL, "")
     print 'Total number of images:', len(filelist)
     print 'Total size of nifti and analyze images:', \
