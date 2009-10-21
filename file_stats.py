@@ -2,19 +2,25 @@
 """A script to answer these questions about data files used at the
 BIC: how many, how large, and what type of files.
 
+For usage, see command-line help:
+    $ ./file_stats.py -h
+
 Requires
 --------
 Python 2.4 or greater
 
 argparse.py 
-    This can be installed via yum: yum search python-argparse
-    Or from the website: http://code.google.com/p/argparse/
+    This can be installed via yum:  yum search python-argparse
+    Or from the website:  http://code.google.com/p/argparse/
 
 """
 
 import os
+import sys
 import fnmatch
 import locale
+import shlex
+
 import argparse
 
 nifti_pattern = '*.nii*'
@@ -80,9 +86,13 @@ def get_file_list(search_path, patterns):
     patterns."""
     filelist = list(all_dirs(search_path, patterns))
     return filelist
-    
 
-if __name__ == '__main__':
+def main(argv=None):
+    if argv is None:
+        # Look at the FILE_STATS_ARGS environment variable for more arguments.
+        # Stole this from Robert Kern's grin
+        env_args = shlex.split(os.getenv('FILE_STATS_ARGS', ''))
+        argv = [sys.argv[0]] + env_args + sys.argv[1:]
     desc = 'Script to acquire some statistics on images used at the BIC'
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('path', help='the path to generate stats on')
@@ -90,13 +100,15 @@ if __name__ == '__main__':
                         help='filename patterns to search for')
     parser.add_argument('-l', '--list', action='store_true',
                         help='print all files matching the patterns')
-
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='print out some debugging info')
     args = parser.parse_args()
-    print args
+    if args.debug:
+        print args
 
     search_path = validate_search_path(args.path)
     filelist = get_file_list(search_path, args.patterns)
-    # TODO: parameterize
+    # TODO: parameterize?
     asum, amean = file_sizes(filelist)
     
     if args.list:
@@ -107,3 +119,7 @@ if __name__ == '__main__':
     print 'Total size of nifti and analyze images:', \
         locale.format('%d', asum, True)
     print 'Average size:', locale.format('%d', amean, True) 
+
+
+if __name__ == '__main__':
+    main()
