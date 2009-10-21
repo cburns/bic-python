@@ -46,7 +46,7 @@ def build_parents(import_order):
 def print_results(import_order, elapsed_times, parents):
     print "== Tree =="
     for name, import_level, parent in import_order:
-        print "%s%s: %.3f (%s)" % (" "*import_level, name, 
+        print "%s%s: %.3f (%s)" % ("."*import_level, name, 
                                    elapsed_times.get(name, nan), parent)
 
     print "\n"
