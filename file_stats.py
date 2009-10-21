@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """A script to answer these questions about data files used at the
-BIC: how many, how large, and what type of files.
+BIC: how many, how large, and what type of files.  Given a search path
+and a file pattern, file all files that match the pattern(s) and
+report there total and average file sizes.  The default is to report
+on Nifti and Analyze files, patterns=*.nii*;*.img*
 
 For usage, see command-line help:
     $ ./file_stats.py -h
@@ -130,7 +133,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('path', help='the path to generate stats on')
     parser.add_argument('-p', '--patterns', default='*.nii*;*.img*',
-                        help='filename patterns to search for')
+                        help='filename patterns to search for [*.nii*;*.img*]')
     parser.add_argument('-l', '--list', action='store_true',
                         help='print all files matching the patterns')
     parser.add_argument('-d', '--debug', action='store_true',
