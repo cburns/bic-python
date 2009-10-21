@@ -22,6 +22,13 @@ analyze_pattern = '*.img*'
 zip_pattern = '*.gz;*.zip;*.bz2'
 
 def file_sizes(file_list):
+    """Get the sum and mean of filelist.
+    
+    Returns
+    -------
+    sum, mean
+    
+    """
     size_list = map(os.path.getsize, file_list)
     size_sum = sum(size_list)
     size_mean = size_sum / float(len(size_list))
@@ -60,22 +67,39 @@ def all_dirs(root, patterns='*', single_level=False, yield_folders=False):
         if single_level:
             break
 
+def validate_search_path(path):
+    """Validate path passed in at command line."""
+    search_path = os.path.abspath(os.path.expanduser(path))
+    if not os.path.exists(search_path):
+        msg = 'Path "%s" does not exist!' % search_path
+        raise IOError(msg)
+    return search_path
+
+def get_file_list(search_path, patterns):
+    """Search the directories and return list of files that match the
+    patterns."""
+    filelist = list(all_dirs(search_path, patterns))
+    return filelist
+    
+
 if __name__ == '__main__':
     desc = 'Script to acquire some statistics on images used at the BIC'
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('path', help='the path to generate stats on')
-    args = parser.parse_args()
-    
-    search_path = os.path.abspath(os.path.expanduser(args.path))
-    if not os.path.exists(search_path):
-        msg = 'Path "%s" does not exist!' % search_path
-        raise IOError(msg)
+    #parser.add_argument('-f', '--foo', help='frabble the foos')
 
-    newlist = list(all_dirs(search_path, patterns='*.nii*;*.img*'))
-    asum, amean = file_sizes(newlist)
+    args = parser.parse_args()
+    print args
+
+    search_path = validate_search_path(args.path)
+    # TODO: parameterize this from command-line
+    patterns = patterns='*.nii*;*.img*'
+    filelist = get_file_list(search_path, patterns)
+    # TODO: parameterize
+    asum, amean = file_sizes(filelist)
     
     locale.setlocale(locale.LC_ALL, "")
-    print 'Total number of images:', len(newlist)
+    print 'Total number of images:', len(filelist)
     print 'Total size of nifti and analyze images:', \
         locale.format('%d', asum, True)
     print 'Average size:', locale.format('%d', amean, True) 
