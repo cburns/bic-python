@@ -154,6 +154,5 @@ def main(argv=None):
 
     print_stats(filelist, args.patterns)
 
-
 if __name__ == '__main__':
     main()
