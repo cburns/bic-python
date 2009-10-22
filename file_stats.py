@@ -41,13 +41,39 @@ import fnmatch
 import locale
 import shlex
 
+# the md5 module is deprecated in Python 2.6, but hashlib is only
+# available as and external package for versions of python before 2.6.
+# Both md5 algorithms appear to return the same result.
+try:
+    from hashlib import md5
+except ImportError:
+    from md5 import md5
+
 import numpy as np
 
 import argparse
 
+# XXX These are currently unused.  Consider deletion.
 nifti_pattern = '*.nii*'
 analyze_pattern = '*.img*'
 zip_pattern = '*.gz;*.zip;*.bz2'
+
+def _hash_file(filename):
+    """Calculate hexdigest of the contents of filename.
+
+    Hashes the file contents, not the filename.  Uses md5 hash.
+
+    Returns
+    -------
+    hexdigest : string
+
+    """
+    
+    md5obj = md5()
+    fp = file(filename, 'rb')
+    md5obj.update(fp.read())
+    fp.close()
+    return md5obj.hexdigest()
 
 def file_sizes(file_list):
     """Get the file size for each file in the list.
