@@ -181,10 +181,12 @@ def all_dirs(root, patterns='*', single_level=False, yield_folders=False):
             files.extend(subdirs)
         files.sort()
         for name in files:
-            for pattern in patterns:
-                if fnmatch.fnmatch(name, pattern):
-                    yield os.path.join(path, name)
-                    break
+            # We don't care about symlinks.  Ignore any we find.
+            if not os.path.islink(os.path.join(path, name)):
+                for pattern in patterns:
+                    if fnmatch.fnmatch(name, pattern):
+                        yield os.path.join(path, name)
+                        break
         if single_level:
             break
 
