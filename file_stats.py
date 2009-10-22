@@ -68,12 +68,51 @@ def _hash_file(filename):
     hexdigest : string
 
     """
-    
+
     md5obj = md5()
     fp = file(filename, 'rb')
     md5obj.update(fp.read())
     fp.close()
     return md5obj.hexdigest()
+
+def file_hashes(file_list):
+    """Calculate md5 hashes for all files in file_list.
+
+    This can be slow, depending on size of the list.
+ 
+    Returns
+    -------
+    hashed_files : dict
+        Dictionary where the keys are the md5 hashes and the values
+        are a list of all filenames that match that md5 hash.
+
+    """
+
+    dct = {}
+    for fn in file_list:
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        hsh = _hash_file(fn)
+        if hsh in dct:
+            dct[hsh].append(fn)
+        else:
+            dct[hsh] = [fn]
+    return dct
+
+def find_duplicate_files(hash_dict):
+    """Print out any duplicate files from the hashed dictionary, hash_dict.
+    
+    hash_dict is returned from file_hashes function.
+
+    """
+
+    print '\n'
+    for key, value in hash_dict.iteritems():
+        if len(value) > 1:
+            print 'These files are identical (%s):' % key
+            for item in value:
+                print '\t%s' % item
+
 
 def file_sizes(file_list):
     """Get the file size for each file in the list.
@@ -189,17 +228,20 @@ def main(argv=None):
         argv = [sys.argv[0]] + env_args + sys.argv[1:]
     desc = 'Script to acquire some statistics on images used at the BIC'
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('path', help='the path to generate stats on')
+    parser.add_argument('path', help='The path to generate stats on.')
     parser.add_argument('-p', '--patterns', default='*.nii*;*.img*',
-                        help='filename patterns to search for [*.nii*;*.img*]')
+                        help='Filename patterns to search for [*.nii*;*.img*]')
     list_help = 'Print NUM largest files matching the patterns' \
         ' or all files if NUM is not supplied'
-    parser.add_argument('-n', '--num', nargs='?', default=False,
+    parser.add_argument('-n', '--num', nargs='?', default=False, 
                         help=list_help)
     parser.add_argument('-d', '--debug', action='store_true',
-                        help='print out some debugging info')
+                        help='Print out some debugging info.')
+    md5_help = 'Find duplicate files. (SLOW) ' \
+        'Performs md5 calculation on files and looks for matches'
+    parser.add_argument('-m', '--md5', action='store_true', help=md5_help)
     parser.add_argument('--doc', action='store_true',
-                        help='print extended documentation')
+                        help='Print extended documentation.')
     args = parser.parse_args()
     if args.debug:
         print args
@@ -224,6 +266,12 @@ def main(argv=None):
             selected = size_array[-n:]
         print
         print_files(selected)
+
+    # Check for duplicate files
+    if args.md5:
+        print '\nAnalyzing files, looking for duplicates...'
+        hashed_files = file_hashes(filelist)
+        find_duplicate_files(hashed_files)
 
 if __name__ == '__main__':
     main()
