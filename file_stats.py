@@ -46,6 +46,12 @@ Find duplicate files with extension .nii.gz (SLOW):
 Run file_stats on multiple directories:
     ./file_stats.py -p *.nii.gz ~/data/pype-tut ~/data/nipype-tutorial
 
+Skip selected directories with the -d or --skip-dirs option:
+    ./file_stats.py ~/data -d ~/data/pype-tut/fb1-raw-study/mgh-101*
+
+Support for wildcards.  Search all directories in ~/data/pype-tut:
+    ./file_stats.py ~/data/pype-tut/*
+
 """
 
 import os
