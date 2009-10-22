@@ -19,6 +19,13 @@ argparse.py
 Examples
 --------
 
+To execute the file_stats script, if file_stats.py is executable, you
+can use this form on the command-line:
+    ./file_stats.py [options]
+
+If file_stats.py is not executable, use this form:
+    python file_stats.py [options]
+
 Find stats on all Nifti and Analyze files in the users 'data' directory:
     ./file_stats.py ~/data
 
@@ -30,8 +37,11 @@ OR:
 Find stats on all files with 'foo' in their name:
     ./file_stats.py ~/data -p *foo*
 
-Find stats and print 3 largest files matching the patter:
+Find stats and print 3 largest files matching the pattern:
     ./file_stats.py ~/data/nifti-nih -n 3
+
+Find duplicate files with extension .nii.gz (SLOW):
+    ./file_stats.py ~/data -p *.nii.gz --md5
 
 """
 
