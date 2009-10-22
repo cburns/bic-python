@@ -35,13 +35,16 @@ OR:
     ./file_stats.py ~/data -p *.nii
 
 Find stats on all files with 'foo' in their name:
-    ./file_stats.py ~/data -p *foo*
+    ./file_stats.py -p *foo* ~/data
 
 Find stats and print 3 largest files matching the pattern:
-    ./file_stats.py ~/data/nifti-nih -n 3
+    ./file_stats.py -n 3 ~/data/nifti-nih
 
 Find duplicate files with extension .nii.gz (SLOW):
-    ./file_stats.py ~/data -p *.nii.gz --md5
+    ./file_stats.py -p *.nii.gz --md5 ~/data
+
+Run file_stats on multiple directories:
+    ./file_stats.py -p *.nii.gz ~/data/pype-tut ~/data/nipype-tutorial
 
 """
 
@@ -240,7 +243,8 @@ def main(argv=None):
         argv = [sys.argv[0]] + env_args + sys.argv[1:]
     desc = 'Script to acquire some statistics on images used at the BIC'
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('path', help='The path to generate stats on.')
+    parser.add_argument('path', nargs='*', 
+                        help='The path(s) to generate stats on.')
     parser.add_argument('-p', '--patterns', default='*.nii*;*.img*',
                         help='Filename patterns to search for [*.nii*;*.img*]')
     list_help = 'Print NUM largest files matching the patterns' \
@@ -261,8 +265,12 @@ def main(argv=None):
         print __doc__
         return
 
-    search_path = validate_search_path(args.path)
-    filelist = get_file_list(search_path, args.patterns)
+    filelist = []
+    for pth in args.path:
+        search_path = validate_search_path(pth)
+        tmplist = get_file_list(search_path, args.patterns)
+        filelist.extend(tmplist)
+
     # Get file sizes
     size_array = file_sizes(filelist)
 
