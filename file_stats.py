@@ -124,13 +124,11 @@ def get_file_list(search_path, patterns):
     filelist = list(all_dirs(search_path, patterns))
     return filelist
 
-def _format_output(val, fmt='%d'):
-    return locale.format(fmt, val, True).rjust(20)
+def _format_output(val, fmt='%d', rjust=20):
+    return locale.format(fmt, val, True).rjust(rjust)
 
-def print_stats(filelist, patterns):
+def print_stats(size_array, patterns):
     """Print file statistics for files in filelist."""
-    # Get file sizes
-    size_array = file_sizes(filelist)
     # Calculate some stats
     asum = size_array['size'].sum()
     amean = size_array['size'].mean()
@@ -141,7 +139,7 @@ def print_stats(filelist, patterns):
     # set internationalization settings to user defaults
     locale.setlocale(locale.LC_ALL, "")
     print 'Patterns matched:', patterns
-    print 'Number of files: ', len(filelist)
+    print 'Number of files: ', _format_output(len(size_array), rjust=18)
     print 'Total size:    ', _format_output(asum)
     print 'Average size:  ', _format_output(amean)
     print 'Minimum size:  ', _format_output(amin)
@@ -149,6 +147,10 @@ def print_stats(filelist, patterns):
     print 'Standard dev:  ', _format_output(astd)
     print 'Variance:      ', _format_output(int(avar))
 
+def print_files(size_array):
+    """Print given files and their sizes."""
+    for sz, fn in size_array:
+        print _format_output(sz, rjust=16), ' ', fn
 
 def main(argv=None):
     if argv is None:
@@ -161,8 +163,10 @@ def main(argv=None):
     parser.add_argument('path', help='the path to generate stats on')
     parser.add_argument('-p', '--patterns', default='*.nii*;*.img*',
                         help='filename patterns to search for [*.nii*;*.img*]')
-    parser.add_argument('-l', '--list', action='store_true',
-                        help='print all files matching the patterns')
+    list_help = 'Print NUM largest files matching the patterns' \
+        ' or all files if NUM is not supplied'
+    parser.add_argument('-n', '--num', nargs='?', default=False,
+                        help=list_help)
     parser.add_argument('-d', '--debug', action='store_true',
                         help='print out some debugging info')
     parser.add_argument('--doc', action='store_true',
@@ -176,12 +180,21 @@ def main(argv=None):
 
     search_path = validate_search_path(args.path)
     filelist = get_file_list(search_path, args.patterns)
-    if args.list:
-        # TODO: add nargs to this argument and print out # largest files
-        for item in filelist:
-            print item
+    # Get file sizes
+    size_array = file_sizes(filelist)
 
-    print_stats(filelist, args.patterns)
+    print_stats(size_array, args.patterns)
+
+    if args.num is not False:
+        if args.num is None:
+            # print whole list
+            selected = size_array
+        else:
+            # print only requested amount
+            n = int(args.num)
+            selected = size_array[-n:]
+        print
+        print_files(selected)
 
 if __name__ == '__main__':
     main()
