@@ -183,7 +183,7 @@ def all_dirs(root, patterns='*', skip_dirs='', single_level=False,
     """
     patterns = patterns.split(';')
     for path, subdirs, files in os.walk(root):
-        # Handle skip_dirs.  skip_dirs is a list of directories to
+        # Handle skip_dirs.  skip_dirs is a list (or set) of directories to
         # skip.  Each directory in the list should be an absolute
         # path.  For each directory in the skip_dirs, if it matches a
         # directory returned in subdirs (which are subdirectories to
@@ -219,6 +219,17 @@ def validate_search_path(path):
         msg = 'Path "%s" does not exist!' % search_path
         raise IOError(msg)
     return search_path
+
+def _clean_file_list(dir_list):
+    """Clean paths and remove duplicates.  Return clean list of files."""
+    dirs = []
+    for dr in dir_list:
+        # remove trailing slashes
+        dr = dr.rstrip(os.path.sep)
+        # append absolute path
+        dirs.append(validate_search_path(dr))
+    # remove duplicates
+    return set(dirs)
 
 def get_file_list(search_path, patterns, skip_dirs):
     """Search the directories and return list of files that match the
@@ -286,14 +297,11 @@ def main(argv=None):
         print __doc__
         return
 
-    skip_dirs = []
-    for sdir in args.skip_dirs:
-        skip_dirs.append(validate_search_path(sdir))
-
+    skip_dirs = _clean_file_list(args.skip_dirs)
+    path_dirs = _clean_file_list(args.path)
     filelist = []
-    for pth in args.path:
-        search_path = validate_search_path(pth)
-        tmplist = get_file_list(search_path, args.patterns, skip_dirs)
+    for pth in path_dirs:
+        tmplist = get_file_list(pth, args.patterns, skip_dirs)
         filelist.extend(tmplist)
 
     if not filelist:
