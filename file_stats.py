@@ -38,6 +38,8 @@ import fnmatch
 import locale
 import shlex
 
+import numpy as np
+
 import argparse
 
 nifti_pattern = '*.nii*'
@@ -45,17 +47,70 @@ analyze_pattern = '*.img*'
 zip_pattern = '*.gz;*.zip;*.bz2'
 
 def file_sizes(file_list):
-    """Get the sum and mean of filelist.
+    """Get the file size for each file in the list.
     
     Returns
     -------
-    sum, mean
+    size_list : list
+        List containing (file_size, file_name) pairs.
     
     """
-    size_list = map(os.path.getsize, file_list)
+    #size_list = map(os.path.getsize, file_list)
+    #[(os.path.getsize(fn), fn) for fn in filelist]
+    lst = []
+    # calculate maximum filename length so we know how large to make
+    # our recarray.
+    max_len = 0
+    for fn in file_list:
+        sz = int(os.path.getsize(fn))
+        lst.append((sz, fn))
+        if len(fn) > max_len:
+            max_len = len(fn)
+    # sort smallest to largest (in-place)
+    lst.sort()
+    # Create an array so we can easily access the columns later
+    tmp_array = np.array(lst)
+    #fn_dtype = 'S%d' % max_len
+    fn_dtype = tmp_array.dtype
+    # Create a record array so we can access the array columns via field names.
+    size_array = np.recarray((len(lst),), dtype = [('size', 'int32'), 
+                                                   ('filename', fn_dtype)])
+    size_array['size'][:] = tmp_array[:, 0]
+    size_array['filename'][:] = tmp_array[:, 1]
+    return size_array
+
+    # assert X['size'].max() == X['size'][-1]
+
+    """
+    In [107]: X[:, 0].astype(int)
+    Out[107]: array([   41312,   344416,   902981,   902981, 30966112, 42338528])
+
+    In [130]: ra = np.recarray((6,), dtype=[('size', 'int32'), ('filename', 'S51')])
+
+    In [116]: strarr = np.zeros(6, dtype='|S51')
+
+    In [117]: Y[:, 1]
+    Out[117]: 
+    array(['/Users/cburns/data/nifti-nih/minimal.nii',
+           '/Users/cburns/data/nifti-nih/zstat1.nii',
+           '/Users/cburns/data/nifti-nih/avg152T1_LR_nifti.nii',
+           '/Users/cburns/data/nifti-nih/avg152T1_RL_nifti.nii',
+           '/Users/cburns/data/nifti-nih/filtered_func_data.nii',
+           '/Users/cburns/data/nifti-nih/newsirp_final_XML.nii'], 
+          dtype='|S51')
+
+    In [118]: strarr[:] = Y[:, 1]
+
+    In [133]: ra['size'][:] = Y[:, 0]
+    In [136]: ra['filename'][:] = Y[:, 1]
+
+
+    """
+    """
     size_sum = sum(size_list)
     size_mean = size_sum / float(len(size_list))
     return size_sum, size_mean
+    """
 
 def all_dirs(root, patterns='*', single_level=False, yield_folders=False):
     """Return path of filenames that match given patterns.
@@ -104,24 +159,31 @@ def get_file_list(search_path, patterns):
     filelist = list(all_dirs(search_path, patterns))
     return filelist
 
+def _format_output(fmt, val):
+    return locale.format(fmt, val, True).rjust(20)
+
 def print_stats(filelist, patterns):
     """Print file statistics for files in filelist."""
-    # Get some stats
-    asum, amean = file_sizes(filelist)
+    # Get file sizes
+    size_array = file_sizes(filelist)
+    # Calculate some stats
+    asum = size_array['size'].sum()
+    amean = size_array['size'].mean()
+    amin = size_array['size'].min()
+    amax = size_array['size'].max()
+    astd = size_array['size'].std()
+    avar = size_array['size'].var()
     # set internationalization settings to user defaults
     locale.setlocale(locale.LC_ALL, "")
     print 'Patterns matched:', patterns
     print 'Number of files: ', len(filelist)
     print 'Total size:    ', locale.format('%d', asum, True).rjust(20)
-    print 'Average size:  ', locale.format('%d', amean, True).rjust(20)
-    """
-    print '-'*70
-    print 'PATTERNS'.ljust(20),
-    print '#_FILES'.rjust(20),
-    print 'TOTAL_SIZE'.rjust(20),
-    print 'AVG_SIZE'.rjust(20)
-    print '-'*70
-    """
+    print 'Average size:  ', locale.format('%.2f', amean, True).rjust(20)
+    print 'Minimum size:  ', _format_output('%d', amin)
+    print 'Maximum size:  ', _format_output('%d', amax)
+    print 'Standard dev:  ', _format_output('%.2f', astd)
+    print 'Variance:      ', _format_output('%.2f', avar) 
+
 
 def main(argv=None):
     if argv is None:
@@ -150,6 +212,7 @@ def main(argv=None):
     search_path = validate_search_path(args.path)
     filelist = get_file_list(search_path, args.patterns)
     if args.list:
+        # TODO: add nargs to this argument and print out # largest files
         for item in filelist:
             print item
 
