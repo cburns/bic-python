@@ -30,6 +30,9 @@ OR:
 Find stats on all files with 'foo' in their name:
     ./file_stats.py ~/data -p *foo*
 
+Find stats and print 3 largest files matching the patter:
+    ./file_stats.py ~/data/nifti-nih -n 3
+
 """
 
 import os
