@@ -158,7 +158,8 @@ def file_sizes(file_list):
     return size_array
 
 
-def all_dirs(root, patterns='*', single_level=False, yield_folders=False):
+def all_dirs(root, patterns='*', skip_dirs='', single_level=False, 
+             yield_folders=False):
     """Return path of filenames that match given patterns.
     
     Parameters
@@ -167,7 +168,9 @@ def all_dirs(root, patterns='*', single_level=False, yield_folders=False):
         Root path to begin searching for files that match the patterns
     patterns : string
         Patterns to search for, multiple patterns are separated by semicolon.
-        TODO:  Make this a list!
+        TODO:  Make this a list?
+    skip_dirs : string
+        Directories to skip/ignore
     single_level : {True, False}
         TODO: Change to recurse and reverse logic below!
     yield_folders : {True, False}
@@ -180,6 +183,22 @@ def all_dirs(root, patterns='*', single_level=False, yield_folders=False):
     """
     patterns = patterns.split(';')
     for path, subdirs, files in os.walk(root):
+        # Handle skip_dirs.  skip_dirs is a list of directories to
+        # skip.  Each directory in the list should be an absolute
+        # path.  For each directory in the skip_dirs, if it matches a
+        # directory returned in subdirs (which are subdirectories to
+        # be searched next by os.walk), then remove them from the list
+        # so they are not searched again.
+        to_remove = []
+        for sd in skip_dirs:
+            for sdir in subdirs:
+                if sd in os.path.join(path, sdir):
+                    to_remove.append(sdir)
+        # Remove the subdirs outside of the above for-loop because
+        # there we are iterating over the subdirs and it is not safe
+        # to modify a sequence you are iterating over!
+        for sdir in to_remove:
+            subdirs.remove(sdir)
         if yield_folders:
             files.extend(subdirs)
         files.sort()
@@ -201,10 +220,10 @@ def validate_search_path(path):
         raise IOError(msg)
     return search_path
 
-def get_file_list(search_path, patterns):
+def get_file_list(search_path, patterns, skip_dirs):
     """Search the directories and return list of files that match the
     patterns."""
-    filelist = list(all_dirs(search_path, patterns))
+    filelist = list(all_dirs(search_path, patterns, skip_dirs=skip_dirs))
     return filelist
 
 def _format_output(val, fmt='%d', rjust=20):
@@ -251,11 +270,13 @@ def main(argv=None):
         ' or all files if NUM is not supplied'
     parser.add_argument('-n', '--num', nargs='?', default=False, 
                         help=list_help)
-    parser.add_argument('-d', '--debug', action='store_true',
+    parser.add_argument('--debug', action='store_true',
                         help='Print out some debugging info.')
     md5_help = 'Find duplicate files. (SLOW) ' \
         'Performs md5 calculation on files and looks for matches'
     parser.add_argument('-m', '--md5', action='store_true', help=md5_help)
+    parser.add_argument('-d', '--skip-dirs', nargs='*', default='',
+                        help='Ignore/skip these directories')
     parser.add_argument('--doc', action='store_true',
                         help='Print extended documentation.')
     args = parser.parse_args()
@@ -265,11 +286,19 @@ def main(argv=None):
         print __doc__
         return
 
+    skip_dirs = []
+    for sdir in args.skip_dirs:
+        skip_dirs.append(validate_search_path(sdir))
+
     filelist = []
     for pth in args.path:
         search_path = validate_search_path(pth)
-        tmplist = get_file_list(search_path, args.patterns)
+        tmplist = get_file_list(search_path, args.patterns, skip_dirs)
         filelist.extend(tmplist)
+
+    if not filelist:
+        # No files to process
+        return
 
     # Get file sizes
     size_array = file_sizes(filelist)
