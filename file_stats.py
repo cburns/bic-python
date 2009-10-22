@@ -119,7 +119,7 @@ def find_duplicate_files(hash_dict):
     print '\n'
     for key, value in hash_dict.iteritems():
         if len(value) > 1:
-            print 'These files are identical (%s):' % key
+            print '\nThese files are identical (%s):' % key
             for item in value:
                 print '\t%s' % item
 
