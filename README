@@ -1,0 +1,5 @@
+This repository contains various tools/applications intended to be
+used at the Brain Imaging Center at UC Berkeley.
+
+Currently only the file_stats.py is used.
+
