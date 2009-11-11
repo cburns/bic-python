@@ -61,26 +61,28 @@ class Crosshairs(BaseTool):
         self.event_state = "normal"
         event.handled = True
 
-class SlicePlot(Plot):
-    datasource = Instance(ArrayPlotData)
-    #data = Instance(Array)
+class SlicePlot(HasTraits):
+    plot = Instance(Plot)
+    plotdata = Instance(ArrayPlotData)
+
     cursor = Instance(BaseCursorTool)
     cursor_pos = DelegatesTo('cursor', prefix='current_position')
 
-    def __init__(self, datasource, id):
-        self.datasource = datasource
-        super(SlicePlot, self).__init__(self.datasource)
-        #self.data = datasource.get_data(id)
-        self.renderer = self.img_plot(id)[0]
-        self.plot = self.renderer
+    def __init__(self, plotdata, id):
+        super(SlicePlot, self).__init__()
+
+        self.plotdata = plotdata
+        self.plot = Plot(self.plotdata)
+        self.renderer = self.plot.img_plot(id)[0]
+        self.container = self.plot.container
 
         # Adding a cursor to the axial plot to test cursor
         # functionality in Chaco
         self.cursor = CursorTool(self.renderer, drag_button='left', 
                                  color='blue')
         #x, y = self.data.shape
-        self.data = self.datasource.get_data(id)
-        x, y = self.datasource.get_data(id).shape
+        self.data = self.plotdata.get_data(id)
+        x, y = self.plotdata.get_data(id).shape
         self.cursor.current_position = x/2, y/2
         self.renderer.overlays.append(self.cursor)
         self.renderer.tools.append(Crosshairs(self.renderer))
@@ -89,14 +91,47 @@ class SlicePlot(Plot):
         print '_cursor_pos_changed:', name
         x, y = self.cursor_pos
         print 'cursor_pos (%d, %d)' % (x, y)
-        #arr = self.datasource['axial']
+        #arr = self.plotdata['axial']
+        
+        print 'intensity:', self.data[y,x]
+
+class IsPlot(Plot):
+    cursor = Instance(BaseCursorTool)
+    cursor_pos = DelegatesTo('cursor', prefix='current_position')
+
+    def __init__(self, data, **kwtraits):
+        super(IsPlot, self).__init__(data, **kwtraits)
+
+    def set_slice(self, name):
+        self.renderer = self.img_plot(name)[0]
+        self.slicename = name
+        self.init_cursor()
+
+    def init_cursor(self):
+        # Adding a cursor to the axial plot to test cursor
+        # functionality in Chaco
+        self.cursor = CursorTool(self.renderer, drag_button='left', 
+                                 color='blue')
+        #x, y = self.data.shape
+        #self.data = self.plotdata.get_data(id)
+        x, y = self.data.get_data(self.slicename).shape
+        self.cursor.current_position = x/2, y/2
+        self.renderer.overlays.append(self.cursor)
+        self.renderer.tools.append(Crosshairs(self.renderer))
+
+    def _cursor_pos_changed(self, name, old, new):
+        print '_cursor_pos_changed:', name
+        x, y = self.cursor_pos
+        print 'cursor_pos (%d, %d)' % (x, y)
+        #arr = self.plotdata['axial']
         
         print 'intensity:', self.data[y,x]
 
 
 class Viewer(HasTraits):
-    plot = Instance(GridContainer)
-    container = GridContainer(shape=(2,2))
+    #plot = Instance(GridContainer)
+    #container = GridContainer(shape=(2,2))
+    plot = Instance(IsPlot)
 
     traits_view = View(
             Item('plot', editor=ComponentEditor(), show_label=False), 
@@ -120,10 +155,14 @@ class Viewer(HasTraits):
         # Create array data container
         self.plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, 
                                  coronal=coronal)
-        axl_plt = SlicePlot(self.plotdata, 'axial')
+        #axl_plt = SlicePlot(self.plotdata, 'axial')
+        axl_plt = IsPlot(self.plotdata)
+        #axl_plt.img_plot('axial')
+        axl_plt.set_slice('axial')
 
-        self.container.add(axl_plt)
-        self.plot = self.container
+        #self.container.add(axl_plt)
+        #self.plot = self.container
+        self.plot = axl_plt
 
 if __name__ == '__main__':
     viewer = Viewer()
