@@ -1,7 +1,7 @@
 
 from numpy import linspace, sin
 from enthought.chaco.api import ArrayPlotData, Plot, gray, GridContainer, \
-    OverlayPlotContainer
+    OverlayPlotContainer, GridDataSource
 from enthought.enable.component_editor import ComponentEditor
 from enthought.traits.api import HasTraits, Instance, DelegatesTo, \
     on_trait_change, Enum
@@ -37,7 +37,9 @@ def load_image():
     file_name = open_file()
     if file_name != '':
         print 'Opened file:', file_name
-        img = ni.load_image(file_name)
+        #img = ni.load_image(file_name)
+        import nifti
+        img = nifti.NiftiImage(file_name)
         return img, file_name
 
 class Crosshairs(BaseTool):
@@ -95,28 +97,44 @@ class ImagePlot(HasTraits):
         img, filename = load_image()
         if img is None:
             raise IOError('No image to show!')
-        zdim, ydim, xdim = img.shape
-        image = img._data[:, :, xdim/2]
-        axial = img._data[:, :, xdim/2]
-        coronal = img._data[:, ydim/2, :]
-        sagittal = img._data[zdim/2, :, :]
 
+        # pynifti image
+        zdim, ydim, xdim = img.data.shape
+        axial = img.data[zdim/2, :, :]
+        coronal = img.data[:, ydim/2, :]
+        sagittal = img.data[:, :, xdim/2]
+        """
+        # nipy image
+        xdim, ydim, zdim = img.shape
+        axial = img._data[:, :, zdim/2]
+        coronal = img._data[:, ydim/2, :]
+        sagittal = img._data[xdim/2, :, :]
+        """
         # Create array data container
         self.plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, 
                                  coronal=coronal)
 
+        """
+        self.plotdata = GridDataSource(axial=axial, sagittal=sagittal, 
+                                 coronal=coronal)
+                                 """
         # Create a Plot and associate it with the PlotData
         axl_plt = Plot(self.plotdata)
-        axl_imgplt = axl_plt.img_plot('axial', colormap=gray)
-        axl_imgplt = axl_imgplt[0] # img_plot returns a list
+        axl_img = axl_plt.img_plot('axial', colormap=gray)
+        axl_img = axl_img[0] # img_plot returns a list
 
         sag_plt = Plot(self.plotdata)
-        sag_imgplt = sag_plt.img_plot('sagittal', colormap=gray)[0]
+        sag_img = sag_plt.img_plot('sagittal', colormap=gray)[0]
+        
         # Crosshairs
         #sag_imgplt.tools.append(Crosshairs(sag_imgplt))
 
         cor_plt = Plot(self.plotdata)
-        self.cor_imgplt = cor_plt.img_plot('coronal', colormap=gray)[0]
+        cor_img = cor_plt.img_plot('coronal', colormap=gray)[0]
+
+        # Connect plots
+        #sag_img.index = axl_img.value
+
         """
         overlays = self.cor_imgplt.overlays
         overlays.append(LineInspector(self.cor_imgplt, 
@@ -138,13 +156,17 @@ class ImagePlot(HasTraits):
         self.container.add(axl_plt)
         self.container.add(sag_plt)
         self.container.add(cor_plt)
-
+        """
+        self.container.add(axl_img)
+        self.container.add(sag_img)
+        self.container.add(cor_img)
+        """
         # Adding a cursor to the axial plot to test cursor
         # functionality in Chaco
-        self.cursor = CursorTool(axl_imgplt, drag_button='left', color='blue')
+        self.cursor = CursorTool(axl_img, drag_button='left', color='blue')
         self.cursor.current_position = zdim/2, ydim/2
-        axl_imgplt.overlays.append(self.cursor)
-        axl_imgplt.tools.append(Crosshairs(axl_imgplt))
+        axl_img.overlays.append(self.cursor)
+        axl_img.tools.append(Crosshairs(axl_img))
 
         # Assign it to our self.plot attribute
         self.plot = self.container
