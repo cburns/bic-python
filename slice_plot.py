@@ -112,16 +112,12 @@ class SlicePlot(Plot):
 
 
 class Viewer(HasTraits):
-    # Three plots
     plot = Instance(GridContainer)
     container = GridContainer(shape=(2,2))
-    #container = Instance(GridContainer)
-    
-    #plot = Instance(HPlotContainer)
 
     traits_view = View(
             Item('plot', editor=ComponentEditor(), show_label=False), 
-            width=500, height=500,
+            width=800, height=600,
             resizable=True,
             title = "Image Plot")
 
@@ -158,16 +154,13 @@ class Viewer(HasTraits):
         sag_plt.sync_trait('xindex', self.voxel, alias='y')
         sag_plt.sync_trait('yindex', self.voxel, alias='z')
 
-        # Three plots
-        #self.container = GridContainer(axl_plt, shape=(2,2))
+        # Add our plots to the GridContainer
         self.container.add(axl_plt)
         self.container.add(cor_plt)
         self.container.add(sag_plt)
+
         self.plot = self.container
         
-        #container = HPlotContainer(axl_plt, cor_plt)
-        #self.plot = container
-
 
 if __name__ == '__main__':
     viewer = Viewer()
