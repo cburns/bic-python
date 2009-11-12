@@ -66,9 +66,10 @@ class Voxel(HasTraits):
     y = Int
     z = Int
 
-    #@on_trait_change #('x', 'y', 'z')
+    #@on_trait_change('x, y, z')
     def _anytrait_changed(self, name, old, new):
-        print 'Voxel changed:', name, old, new
+        #print 'Voxel changed:', name, old, new
+        pass
 
 class SlicePlot(Plot):
     cursor = Instance(BaseCursorTool)
@@ -80,8 +81,6 @@ class SlicePlot(Plot):
     def __init__(self, data, **kwtraits):
         super(SlicePlot, self).__init__(data, **kwtraits)
         self.voxel = kwtraits.get('voxel') # XXX what to set for default?
-        #self.x = 'x'
-        #self.y = 'y'#Str
 
     def set_slice(self, name):
         self.renderer = self.img_plot(name, hide_grids=False)[0]
@@ -102,34 +101,13 @@ class SlicePlot(Plot):
 
     @on_trait_change('xindex, yindex')
     def _index_changed(self, name, old, new):
-        print '_index_changed:', name, old, new
+        #print '_index_changed:', name, old, new
         self.cursor.current_position = self.xindex, self.yindex
 
     def _cursor_pos_changed(self, name, old, new):
-        x, y = self.cursor_pos
-        #self.voxel.x = x
-        #self.voxel.y = y
-        #self.voxel.set(self.x = x, self.y = y)
-        """
-        if self.x == 'x':
-            self.voxel.x = x
-        elif self.x == 'y':
-            self.voxel.y = x
-        elif self.x == 'z':
-            self.voxel.z = x
-
-        if self.y == 'x':
-            self.voxel.x = y
-        elif self.y == 'y':
-            self.voxel.y = y
-        elif self.y == 'z':
-            self.voxel.z = y
-            """
-        self.xindex = x
-        self.yindex = y
-        print 'cursor_pos (%d, %d)' % (x, y)
-        print 'voxel:', self.voxel.get('x', 'y', 'z')
-
+        self.xindex, self.yindex = self.cursor_pos
+        #print 'cursor_pos (%d, %d)' % (x, y)
+        #print 'voxel:', self.voxel.get('x', 'y', 'z')
         #print 'intensity:', self.data[y,x]
 
 
@@ -139,9 +117,6 @@ class Viewer(HasTraits):
     #container = GridContainer(shape=(2,2))
     #container = Instance(GridContainer)
     
-    # one plot
-    #plot = Instance(SlicePlot)
-
     plot = Instance(HPlotContainer)
 
     traits_view = View(
@@ -170,19 +145,11 @@ class Viewer(HasTraits):
                                  coronal=coronal)
         axl_plt = SlicePlot(self.plotdata, voxel=self.voxel)
         axl_plt.set_slice('axial')
-        #axl_plt.x = DelegatesTo('voxel', prefix='x')
-        #axl_plt.y = DelegatesTo('voxel', prefix='y')
-        #axl_plt.x = 'x'
-        #axl_plt.y = 'y'
         axl_plt.sync_trait('xindex', self.voxel, alias='x')
         axl_plt.sync_trait('yindex', self.voxel, alias='y')
 
         cor_plt = SlicePlot(self.plotdata, voxel=self.voxel)
         cor_plt.set_slice('coronal')
-        #cor_plt.x = DelegatesTo('voxel', prefix='x')
-        #cor_plt.y = DelegatesTo('voxel', prefix='z')
-        #cor_plt.x = 'x'
-        #cor_plt.y = 'z'
         cor_plt.sync_trait('xindex', self.voxel, alias='x')
         cor_plt.sync_trait('yindex', self.voxel, alias='z')
 
@@ -195,8 +162,6 @@ class Viewer(HasTraits):
         container = HPlotContainer(axl_plt, cor_plt)
         self.plot = container
 
-        # One plot
-        #self.plot = axl_plt
 
 if __name__ == '__main__':
     viewer = Viewer()
