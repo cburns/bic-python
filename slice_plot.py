@@ -1,9 +1,9 @@
 
 from enthought.chaco.api import ArrayPlotData, Plot, gray, GridContainer, \
-    OverlayPlotContainer, GridDataSource
+    OverlayPlotContainer, GridDataSource, HPlotContainer
 from enthought.enable.component_editor import ComponentEditor
 from enthought.traits.api import HasTraits, Instance, DelegatesTo, \
-    on_trait_change, Enum, Array
+    on_trait_change, Enum, Array, Int, Str
 from enthought.traits.ui.api import Item, View
 from enthought.chaco.tools.cursor_tool import CursorTool, BaseCursorTool
 from enthought.enable.api import BaseTool
@@ -61,15 +61,30 @@ class Crosshairs(BaseTool):
         self.event_state = "normal"
         event.handled = True
 
+class Voxel(HasTraits):
+    x = Int
+    y = Int
+    z = Int
+
+    #@on_trait_change #('x', 'y', 'z')
+    def _anytrait_changed(self, name, old, new):
+        print 'Voxel changed:', name, old, new
+
 class SlicePlot(Plot):
     cursor = Instance(BaseCursorTool)
     cursor_pos = DelegatesTo('cursor', prefix='current_position')
+    voxel = Instance(Voxel)
+    xindex = Int
+    yindex = Int
 
     def __init__(self, data, **kwtraits):
         super(SlicePlot, self).__init__(data, **kwtraits)
+        self.voxel = kwtraits.get('voxel') # XXX what to set for default?
+        #self.x = 'x'
+        #self.y = 'y'#Str
 
     def set_slice(self, name):
-        self.renderer = self.img_plot(name)[0]
+        self.renderer = self.img_plot(name, hide_grids=False)[0]
         self.slicename = name
         self.init_cursor()
 
@@ -80,23 +95,54 @@ class SlicePlot(Plot):
                                  color='blue')
         x, y = self.data.get_data(self.slicename).shape
         self.cursor.current_position = x/2, y/2
+        #self.cursor.current_position = self.voxel.x, self.voxel.y
         self.renderer.overlays.append(self.cursor)
         self.renderer.tools.append(Crosshairs(self.renderer))
 
+
+    @on_trait_change('xindex, yindex')
+    def _index_changed(self, name, old, new):
+        print '_index_changed:', name, old, new
+        self.cursor.current_position = self.xindex, self.yindex
+
     def _cursor_pos_changed(self, name, old, new):
-        # self, cursor_pos, (x,y), (x,y)
-        #print '_cursor_pos_changed:', name
         x, y = self.cursor_pos
+        #self.voxel.x = x
+        #self.voxel.y = y
+        #self.voxel.set(self.x = x, self.y = y)
+        """
+        if self.x == 'x':
+            self.voxel.x = x
+        elif self.x == 'y':
+            self.voxel.y = x
+        elif self.x == 'z':
+            self.voxel.z = x
+
+        if self.y == 'x':
+            self.voxel.x = y
+        elif self.y == 'y':
+            self.voxel.y = y
+        elif self.y == 'z':
+            self.voxel.z = y
+            """
+        self.xindex = x
+        self.yindex = y
         print 'cursor_pos (%d, %d)' % (x, y)
-        #arr = self.plotdata['axial']
-        
+        print 'voxel:', self.voxel.get('x', 'y', 'z')
+
         #print 'intensity:', self.data[y,x]
 
 
 class Viewer(HasTraits):
+    # Three plots
     #plot = Instance(GridContainer)
     #container = GridContainer(shape=(2,2))
-    plot = Instance(SlicePlot)
+    #container = Instance(GridContainer)
+    
+    # one plot
+    #plot = Instance(SlicePlot)
+
+    plot = Instance(HPlotContainer)
 
     traits_view = View(
             Item('plot', editor=ComponentEditor(), show_label=False), 
@@ -117,15 +163,40 @@ class Viewer(HasTraits):
         coronal = img.data[:, ydim/2, :]
         sagittal = img.data[:, :, xdim/2]
 
+        self.voxel = Voxel(x=xdim/2, y=ydim/2, z=zdim/2)
+
         # Create array data container
         self.plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, 
                                  coronal=coronal)
-        axl_plt = SlicePlot(self.plotdata)
+        axl_plt = SlicePlot(self.plotdata, voxel=self.voxel)
         axl_plt.set_slice('axial')
+        #axl_plt.x = DelegatesTo('voxel', prefix='x')
+        #axl_plt.y = DelegatesTo('voxel', prefix='y')
+        #axl_plt.x = 'x'
+        #axl_plt.y = 'y'
+        axl_plt.sync_trait('xindex', self.voxel, alias='x')
+        axl_plt.sync_trait('yindex', self.voxel, alias='y')
 
+        cor_plt = SlicePlot(self.plotdata, voxel=self.voxel)
+        cor_plt.set_slice('coronal')
+        #cor_plt.x = DelegatesTo('voxel', prefix='x')
+        #cor_plt.y = DelegatesTo('voxel', prefix='z')
+        #cor_plt.x = 'x'
+        #cor_plt.y = 'z'
+        cor_plt.sync_trait('xindex', self.voxel, alias='x')
+        cor_plt.sync_trait('yindex', self.voxel, alias='z')
+
+        # Three plots
+        #self.container = GridContainer(axl_plt, shape=(2,2))
         #self.container.add(axl_plt)
+        #self.container.add(cor_plt)
         #self.plot = self.container
-        self.plot = axl_plt
+        
+        container = HPlotContainer(axl_plt, cor_plt)
+        self.plot = container
+
+        # One plot
+        #self.plot = axl_plt
 
 if __name__ == '__main__':
     viewer = Viewer()
