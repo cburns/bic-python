@@ -61,46 +61,12 @@ class Crosshairs(BaseTool):
         self.event_state = "normal"
         event.handled = True
 
-class SlicePlot(HasTraits):
-    plot = Instance(Plot)
-    plotdata = Instance(ArrayPlotData)
-
-    cursor = Instance(BaseCursorTool)
-    cursor_pos = DelegatesTo('cursor', prefix='current_position')
-
-    def __init__(self, plotdata, id):
-        super(SlicePlot, self).__init__()
-
-        self.plotdata = plotdata
-        self.plot = Plot(self.plotdata)
-        self.renderer = self.plot.img_plot(id)[0]
-        self.container = self.plot.container
-
-        # Adding a cursor to the axial plot to test cursor
-        # functionality in Chaco
-        self.cursor = CursorTool(self.renderer, drag_button='left', 
-                                 color='blue')
-        #x, y = self.data.shape
-        self.data = self.plotdata.get_data(id)
-        x, y = self.plotdata.get_data(id).shape
-        self.cursor.current_position = x/2, y/2
-        self.renderer.overlays.append(self.cursor)
-        self.renderer.tools.append(Crosshairs(self.renderer))
-
-    def _cursor_pos_changed(self, name, old, new):
-        print '_cursor_pos_changed:', name
-        x, y = self.cursor_pos
-        print 'cursor_pos (%d, %d)' % (x, y)
-        #arr = self.plotdata['axial']
-        
-        print 'intensity:', self.data[y,x]
-
-class IsPlot(Plot):
+class SlicePlot(Plot):
     cursor = Instance(BaseCursorTool)
     cursor_pos = DelegatesTo('cursor', prefix='current_position')
 
     def __init__(self, data, **kwtraits):
-        super(IsPlot, self).__init__(data, **kwtraits)
+        super(SlicePlot, self).__init__(data, **kwtraits)
 
     def set_slice(self, name):
         self.renderer = self.img_plot(name)[0]
@@ -112,26 +78,25 @@ class IsPlot(Plot):
         # functionality in Chaco
         self.cursor = CursorTool(self.renderer, drag_button='left', 
                                  color='blue')
-        #x, y = self.data.shape
-        #self.data = self.plotdata.get_data(id)
         x, y = self.data.get_data(self.slicename).shape
         self.cursor.current_position = x/2, y/2
         self.renderer.overlays.append(self.cursor)
         self.renderer.tools.append(Crosshairs(self.renderer))
 
     def _cursor_pos_changed(self, name, old, new):
-        print '_cursor_pos_changed:', name
+        # self, cursor_pos, (x,y), (x,y)
+        #print '_cursor_pos_changed:', name
         x, y = self.cursor_pos
         print 'cursor_pos (%d, %d)' % (x, y)
         #arr = self.plotdata['axial']
         
-        print 'intensity:', self.data[y,x]
+        #print 'intensity:', self.data[y,x]
 
 
 class Viewer(HasTraits):
     #plot = Instance(GridContainer)
     #container = GridContainer(shape=(2,2))
-    plot = Instance(IsPlot)
+    plot = Instance(SlicePlot)
 
     traits_view = View(
             Item('plot', editor=ComponentEditor(), show_label=False), 
@@ -155,9 +120,7 @@ class Viewer(HasTraits):
         # Create array data container
         self.plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, 
                                  coronal=coronal)
-        #axl_plt = SlicePlot(self.plotdata, 'axial')
-        axl_plt = IsPlot(self.plotdata)
-        #axl_plt.img_plot('axial')
+        axl_plt = SlicePlot(self.plotdata)
         axl_plt.set_slice('axial')
 
         #self.container.add(axl_plt)
