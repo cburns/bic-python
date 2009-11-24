@@ -17,15 +17,21 @@ class Image(object):
 
     def get_axial_slice(self, zindex):
         # XXX implement real slicing.  Assuming xyz ordering.
-        return self.data[:, :, zindex]
+        data = self.data[:, :, zindex]
+        # transpose so it's C ordered
+        return data.T
 
     def get_coronal_slice(self, yindex):
         # XXX implement real slicing.  Assuming xyz ordering.
-        return self.data[:, yindex, :]
+        data = self.data[:, yindex, :]
+        # transpose so it's C ordered
+        return data.T
 
     def get_sagittal_slice(self, xindex):
         # XXX implement real slicing.  Assuming xyz ordering.
-        return self.data[xindex, :, :]
+        data = self.data[xindex, :, :]
+        # transpose so it's C ordered
+        return data.T
 
     @property
     def shape(self):

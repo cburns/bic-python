@@ -62,9 +62,14 @@ class Voxel(HasTraits):
     z = Int
 
     #@on_trait_change('x, y, z')
-    def _anytrait_changed(self, name, old, new):
+    #def _anytrait_changed(self, name, old, new):
         #print 'Voxel changed:', name, old, new
-        pass
+        #print self
+
+    def __repr__(self):
+        # Voxel(x, y, z)
+        outstr = 'Voxel(%d, %d, %d)' % (self.x, self.y, self.z)
+        return outstr
 
 class SlicePlot(Plot):
     cursor = Instance(BaseCursorTool)
@@ -96,11 +101,16 @@ class SlicePlot(Plot):
 
     @on_trait_change('xindex, yindex')
     def _index_changed(self, name, old, new):
+        # Event handler, triggered when mouse left down event happens
+        # in plot.
+
         #print '_index_changed:', name, old, new
+        #print self.slicename, '._index_changed'
         self.cursor.current_position = self.xindex, self.yindex
 
     def _cursor_pos_changed(self, name, old, new):
         self.xindex, self.yindex = self.cursor_pos
+        #print self.slicename, '._cursor_pos_changed:', self.xindex, self.yindex
         #print 'cursor_pos (%d, %d)' % (x, y)
         #print 'voxel:', self.voxel.get('x', 'y', 'z')
         #print 'intensity:', self.data[y,x]
@@ -109,6 +119,9 @@ class SlicePlot(Plot):
 class Viewer(HasTraits):
     plot = Instance(GridContainer)
     container = GridContainer(shape=(2,2))
+    voxel = Instance(Voxel)
+    img = Instance(Image)
+    plotdata = Instance(ArrayPlotData)
 
     traits_view = View(
             Item('plot', editor=ComponentEditor(), show_label=False), 
@@ -120,14 +133,14 @@ class Viewer(HasTraits):
         super(Viewer, self).__init__()
 
         # Load image
-        img, filename = load_image()
-        if img is None:
+        self.img, filename = load_image()
+        if self.img is None:
             raise IOError('No image to show!')
-        xdim, ydim, zdim = img.shape
+        xdim, ydim, zdim = self.img.shape
         self.voxel = Voxel(x=xdim/2, y=ydim/2, z=zdim/2)
-        axial = img.get_axial_slice(self.voxel.z)
-        coronal = img.get_coronal_slice(self.voxel.y)
-        sagittal = img.get_sagittal_slice(self.voxel.x)
+        axial = self.img.get_axial_slice(self.voxel.z)
+        coronal = self.img.get_coronal_slice(self.voxel.y)
+        sagittal = self.img.get_sagittal_slice(self.voxel.x)
 
 
         # Create array data container
@@ -154,7 +167,26 @@ class Viewer(HasTraits):
         self.container.add(sag_plt)
 
         self.plot = self.container
-        
+
+    def update_slices(self):
+        # Update image slices based on selecte voxel coords.
+        # XXX duplicate code
+        axial = self.img.get_axial_slice(self.voxel.z)
+        coronal = self.img.get_coronal_slice(self.voxel.y)
+        sagittal = self.img.get_sagittal_slice(self.voxel.x)
+        try:
+            self.plotdata.set_data('axial', axial)
+            self.plotdata.set_data('coronal', coronal)
+            self.plotdata.set_data('sagittal', sagittal)
+        except AttributeError:
+            # plotdata hasn't been initialized yet
+            pass
+
+    @on_trait_change('voxel.[x,y,z]')
+    def _voxel_changed(self, name, old, new):
+        #print '_voxel_changed, name:', name, 'old:', old, 'new:', new
+        self.update_slices()
+
 
 if __name__ == '__main__':
     viewer = Viewer()
