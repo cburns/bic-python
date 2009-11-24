@@ -15,18 +15,13 @@ from enthought.traits.api import File, Button
 from enthought.traits.ui.api import HGroup
 from enthought.traits.ui.file_dialog import open_file
 
-
-# Nipy stuff
-#import nipy as ni
-import nifti
+from image import Image
 
 def load_image():
     file_name = File
     file_name = open_file()
     if file_name != '':
-        print 'Opened file:', file_name
-        #img = ni.load_image(file_name)
-        img = nifti.NiftiImage(file_name)
+        img = Image(file_name)
         return img, file_name
 
 class Crosshairs(BaseTool):
@@ -128,13 +123,12 @@ class Viewer(HasTraits):
         img, filename = load_image()
         if img is None:
             raise IOError('No image to show!')
-        # pynifti image
-        zdim, ydim, xdim = img.data.shape
-        axial = img.data[zdim/2, :, :]
-        coronal = img.data[:, ydim/2, :]
-        sagittal = img.data[:, :, xdim/2]
-
+        xdim, ydim, zdim = img.shape
         self.voxel = Voxel(x=xdim/2, y=ydim/2, z=zdim/2)
+        axial = img.get_axial_slice(self.voxel.z)
+        coronal = img.get_coronal_slice(self.voxel.y)
+        sagittal = img.get_sagittal_slice(self.voxel.x)
+
 
         # Create array data container
         self.plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, 
