@@ -1,10 +1,11 @@
 
-from enthought.chaco.api import ArrayPlotData, Plot, gray, GridContainer, \
-    OverlayPlotContainer, GridDataSource, HPlotContainer
+from enthought.chaco.api import (ArrayPlotData, Plot, gray, GridContainer,
+                                 OverlayPlotContainer, GridDataSource, 
+                                 HPlotContainer)
 from enthought.enable.component_editor import ComponentEditor
-from enthought.traits.api import HasTraits, Instance, DelegatesTo, \
-    on_trait_change, Enum, Array, Int, Str
-from enthought.traits.ui.api import Item, View
+from enthought.traits.api import (HasTraits, Instance, DelegatesTo, 
+                                  on_trait_change, Enum, Array, Int, Str)
+from enthought.traits.ui.api import (Item, View, Menu, MenuBar, Action)
 from enthought.chaco.tools.cursor_tool import CursorTool, BaseCursorTool
 from enthought.enable.api import BaseTool
 from enthought.chaco.tools.api import LineInspector
@@ -23,6 +24,8 @@ def load_image():
     if file_name != '':
         img = Image(file_name)
         return img, file_name
+    else:
+        return None, None
 
 class Crosshairs(BaseTool):
     event_state = Enum("normal", "mousedown")
@@ -115,37 +118,29 @@ class SlicePlot(Plot):
         #print 'voxel:', self.voxel.get('x', 'y', 'z')
         #print 'intensity:', self.data[y,x]
 
+file_open = Action(name = "Open...", action = "load_image")
+menu_file = Menu(file_open, name = "File")
+menubar = MenuBar(menu_file)
 
 class Viewer(HasTraits):
     plot = Instance(GridContainer)
     container = GridContainer(shape=(2,2))
+    plotdata = Instance(ArrayPlotData)
     voxel = Instance(Voxel)
     img = Instance(Image)
-    plotdata = Instance(ArrayPlotData)
 
     traits_view = View(
             Item('plot', editor=ComponentEditor(), show_label=False), 
             width=800, height=600,
             resizable=True,
-            title = "Image Plot")
+            title = "Image Plot",
+            menubar = menubar)
 
     def __init__(self):
         super(Viewer, self).__init__()
+        
+        self.load_image()
 
-        # Load image
-        self.img, filename = load_image()
-        if self.img is None:
-            raise IOError('No image to show!')
-        xdim, ydim, zdim = self.img.shape
-        self.voxel = Voxel(x=xdim/2, y=ydim/2, z=zdim/2)
-        axial = self.img.get_axial_slice(self.voxel.z)
-        coronal = self.img.get_coronal_slice(self.voxel.y)
-        sagittal = self.img.get_sagittal_slice(self.voxel.x)
-
-
-        # Create array data container
-        self.plotdata = ArrayPlotData(axial=axial, sagittal=sagittal, 
-                                 coronal=coronal)
         axl_plt = SlicePlot(self.plotdata, voxel=self.voxel)
         axl_plt.set_slice('axial')
         axl_plt.sync_trait('xindex', self.voxel, alias='x')
@@ -174,19 +169,37 @@ class Viewer(HasTraits):
         axial = self.img.get_axial_slice(self.voxel.z)
         coronal = self.img.get_coronal_slice(self.voxel.y)
         sagittal = self.img.get_sagittal_slice(self.voxel.x)
-        try:
+
+        if self.plotdata is None:
+            # Create array data container
+            self.plotdata = ArrayPlotData(axial=axial, 
+                                          sagittal=sagittal, 
+                                          coronal=coronal)
+        else:
             self.plotdata.set_data('axial', axial)
             self.plotdata.set_data('coronal', coronal)
             self.plotdata.set_data('sagittal', sagittal)
-        except AttributeError:
-            # plotdata hasn't been initialized yet
-            pass
 
     @on_trait_change('voxel.[x,y,z]')
     def _voxel_changed(self, name, old, new):
         #print '_voxel_changed, name:', name, 'old:', old, 'new:', new
         self.update_slices()
 
+    def load_image(self, info=None):
+        # Load image
+        img, filename = load_image()
+        if img is not None:
+            self.img = img
+            self.filename = filename
+            xdim, ydim, zdim = self.img.shape
+            if self.voxel is None:
+                self.voxel = Voxel(x=xdim/2, y=ydim/2, z=zdim/2)
+            else:
+                self.voxel.x = xdim/2
+                self.voxel.y = ydim/2
+                self.voxel.z = zdim/2
+            self.update_slices()
+            
 
 if __name__ == '__main__':
     viewer = Viewer()
