@@ -179,13 +179,16 @@ class Preferences(HasTraits):
         self.cmap = chaco_colormaps.color_map_name_dict[self.colormap]
 
 def launch_prefs(caller):
-    # XXX Need to think about better way to handle preferences.
+    # XXX Need to think about better way to handle preferences.  Just
+    # handling colormap for now.  Need to abstract preferences into an
+    # object that can be serialized and easily passed between objects
+    # (a dict?).  Also when we open the preferences, the value in the
+    # drop-down list is just the first in the chaco_colormaps dict,
+    # not the current colormap of the plots.  Again, a more robust
+    # solution would fix this.
     prefs = Preferences()
     prefs.edit_traits(kind='modal')
     try:
-        # XXX just handling colormap for now.  Need to abstract
-        # preferences into an object that can be serialized and easily
-        # passed between objects (a dict?).
         caller.update_preferences(prefs.cmap)
     except AttributeError:
         pass
